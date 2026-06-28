@@ -11,11 +11,15 @@ import {
   Clock3,
   Command,
   KanbanSquare,
+  Library,
   MessageSquare,
   Plus,
   Radio,
   Search,
   ShieldCheck,
+  Trash2,
+  Globe2,
+  Terminal,
   Sparkles,
 } from 'lucide-react';
 
@@ -23,6 +27,7 @@ export default function Dashboard({ initialData, error }) {
   const [data, setData] = useState(initialData);
   const [chatText, setChatText] = useState('');
   const [cardTitle, setCardTitle] = useState('');
+  const [mcpForm, setMcpForm] = useState({ name: '', transport: 'http', url: '', command: '', args: '', category: 'custom', description: '' });
   const [search, setSearch] = useState('');
   const app = data.app || {
     brand: 'TanIA / PunkRecords Command OS',
@@ -67,6 +72,33 @@ export default function Dashboard({ initialData, error }) {
     refresh();
   }
 
+  async function createMcp(event) {
+    event.preventDefault();
+    const payload = {
+      ...mcpForm,
+      name: mcpForm.name.trim(),
+      url: mcpForm.url.trim(),
+      command: mcpForm.command.trim(),
+      args: mcpForm.args.trim(),
+      category: mcpForm.category.trim() || 'custom',
+      description: mcpForm.description.trim(),
+      status: 'available',
+    };
+    if (!payload.name) return;
+    await fetch('/api/mcp-library', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify(payload),
+    });
+    setMcpForm({ name: '', transport: 'http', url: '', command: '', args: '', category: 'custom', description: '' });
+    refresh();
+  }
+
+  async function removeMcp(id) {
+    await fetch(`/api/mcp-library/${id}`, { method: 'DELETE' });
+    refresh();
+  }
+
   return (
     <main className="appShell">
       <header className="topbar glass">
@@ -80,6 +112,7 @@ export default function Dashboard({ initialData, error }) {
         <nav className="topnav" aria-label="Navegação principal">
           <a href="#graph">Grafo</a>
           <a href="#kanban">Kanban</a>
+          <a href="#mcp-library">MCPs</a>
           <a href="#chat">Chat</a>
           <a href={app.mcpUrl} target="_blank" rel="noreferrer">MCP <ArrowUpRight size={13} /></a>
         </nav>
@@ -129,6 +162,7 @@ export default function Dashboard({ initialData, error }) {
         <Metric icon={<Sparkles />} label="Chunks" value={data.stats?.chunks} helper="fragmentos RAG" />
         <Metric icon={<Bot />} label="Agentes" value={data.stats?.agents ?? data.agents?.length} helper="operadores" />
         <Metric icon={<Cable />} label="Clientes MCP" value={data.stats?.mcp_clients} helper="integrações" />
+        <Metric icon={<Library />} label="Biblioteca MCP" value={data.stats?.mcp_servers ?? data.mcpServers?.length} helper="servidores" />
         <Metric icon={<KanbanSquare />} label="Cards" value={data.stats?.cards} helper="em fluxo" />
         <Metric icon={<MessageSquare />} label="Mensagens" value={data.stats?.messages} helper="war room" />
       </section>
@@ -173,6 +207,32 @@ export default function Dashboard({ initialData, error }) {
             </div>
           </article>
         </aside>
+      </section>
+
+      <section id="mcp-library" className="panel mcpLibraryPanel">
+        <div className="sectionHead">
+          <SectionTitle icon={<Library />} kicker="Catálogo" title="Biblioteca de MCPs" />
+          <span className="libraryCount">{data.mcpServers?.length || 0} MCPs cadastrados</span>
+        </div>
+        <form onSubmit={createMcp} className="mcpForm">
+          <input value={mcpForm.name} onChange={(e) => setMcpForm({ ...mcpForm, name: e.target.value })} placeholder="Nome do MCP" />
+          <select value={mcpForm.transport} onChange={(e) => setMcpForm({ ...mcpForm, transport: e.target.value })}>
+            <option value="http">HTTP remoto</option>
+            <option value="stdio">stdio/local</option>
+          </select>
+          {mcpForm.transport === 'http' ? (
+            <input value={mcpForm.url} onChange={(e) => setMcpForm({ ...mcpForm, url: e.target.value })} placeholder="https://servidor.com/mcp" />
+          ) : (
+            <input value={mcpForm.command} onChange={(e) => setMcpForm({ ...mcpForm, command: e.target.value })} placeholder="npx, uvx ou comando" />
+          )}
+          <input value={mcpForm.args} onChange={(e) => setMcpForm({ ...mcpForm, args: e.target.value })} placeholder="args: -y pacote-mcp" />
+          <input value={mcpForm.category} onChange={(e) => setMcpForm({ ...mcpForm, category: e.target.value })} placeholder="categoria" />
+          <input className="mcpDescriptionInput" value={mcpForm.description} onChange={(e) => setMcpForm({ ...mcpForm, description: e.target.value })} placeholder="descrição rápida" />
+          <button className="primaryButton buttonReset"><Plus size={16} /> Adicionar MCP</button>
+        </form>
+        <div className="mcpLibraryGrid">
+          {(data.mcpServers || []).map((server) => <McpServerCard key={server.id} server={server} onRemove={removeMcp} />)}
+        </div>
       </section>
 
       <section id="kanban" className="panel kanbanPanel">
@@ -253,6 +313,26 @@ function AgentRow({ agent }) {
       </div>
       <em className={agent.status}>{agent.status || 'idle'}</em>
     </div>
+  );
+}
+
+function McpServerCard({ server, onRemove }) {
+  const isHttp = server.transport === 'http';
+  const target = isHttp ? server.url : `${server.command || ''} ${(server.args || []).join(' ')}`.trim();
+  return (
+    <article className={`mcpServerCard status-${server.status}`}>
+      <div className="mcpServerTop">
+        <span className="mcpTransport">{isHttp ? <Globe2 size={15} /> : <Terminal size={15} />} {server.transport}</span>
+        <span className={server.official ? 'mcpBadge official' : 'mcpBadge'}>{server.official ? 'oficial' : server.status}</span>
+      </div>
+      <strong>{server.name}</strong>
+      <p>{server.description || 'MCP customizado sem descrição.'}</p>
+      <code>{target || 'sem destino configurado'}</code>
+      <div className="mcpServerFoot">
+        <span>{server.category}</span>
+        {!server.official && <button type="button" className="dangerButton" onClick={() => onRemove(server.id)}><Trash2 size={14} /> remover</button>}
+      </div>
+    </article>
   );
 }
 

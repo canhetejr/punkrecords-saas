@@ -147,3 +147,39 @@ insert into public.punk_saas_messages(room_id, agent_id, author_name, body, kind
 select room.id, ag.id, 'TanIA', 'PunkRecords SaaS inicializado: kanban, chat e MCP online.', 'system', '{"source":"seed"}'::jsonb
 from room, ag
 where not exists (select 1 from public.punk_saas_messages where body='PunkRecords SaaS inicializado: kanban, chat e MCP online.');
+
+
+create table if not exists public.punk_saas_mcp_servers (
+  id uuid primary key default gen_random_uuid(),
+  org_id uuid not null references public.punk_saas_orgs(id) on delete cascade,
+  name text not null,
+  slug text not null,
+  description text,
+  category text not null default 'custom',
+  transport text not null default 'http' check (transport in ('http','stdio')),
+  url text,
+  command text,
+  args jsonb not null default '[]'::jsonb,
+  env_template jsonb not null default '{}'::jsonb,
+  headers_template jsonb not null default '{}'::jsonb,
+  status text not null default 'available' check (status in ('available','enabled','disabled','draft')),
+  official boolean not null default false,
+  metadata jsonb not null default '{}'::jsonb,
+  last_checked_at timestamptz,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now(),
+  unique(org_id, slug)
+);
+
+with org as (select id from public.punk_saas_orgs where slug='canhete-labs')
+insert into public.punk_saas_mcp_servers(org_id, name, slug, description, category, transport, url, command, args, env_template, headers_template, status, official, metadata)
+select org.id, x.name, x.slug, x.description, x.category, x.transport, x.url, x.command, x.args::jsonb, x.env_template::jsonb, x.headers_template::jsonb, x.status, x.official, x.metadata::jsonb
+from org, (values
+  ('PunkRecords MCP','punkrecords-mcp','Endpoint MCP público deste SaaS para buscar memória, criar cards e postar no chat.','core','http','https://punkrecords.canhete.com/api/mcp',null,'[]','{}','{}','enabled',true,'{"tools":["search_records","list_cards","create_card","post_message","list_messages","agent_heartbeat"]}'),
+  ('GitHub MCP','github-mcp','Servidor MCP para repositórios, issues, pull requests e código no GitHub.','devtools','stdio',null,'npx','["-y","@modelcontextprotocol/server-github"]','{"GITHUB_PERSONAL_ACCESS_TOKEN":"ghp_..."}','{}','available',true,'{"homepage":"https://github.com/modelcontextprotocol/servers"}'),
+  ('Filesystem MCP','filesystem-mcp','Servidor MCP para ler e escrever arquivos em diretórios permitidos.','local','stdio',null,'npx','["-y","@modelcontextprotocol/server-filesystem","/path/permitido"]','{}','{}','available',true,'{}'),
+  ('Postgres MCP','postgres-mcp','Servidor MCP para consultar bancos Postgres com string de conexão controlada.','database','stdio',null,'npx','["-y","@modelcontextprotocol/server-postgres","postgresql://user:pass@host:5432/db"]','{}','{}','available',true,'{}'),
+  ('Browser MCP','browser-mcp','Servidor MCP para automação de navegador e QA visual.','automation','stdio',null,'npx','["-y","@playwright/mcp@latest"]','{}','{}','available',true,'{}'),
+  ('Custom HTTP MCP','custom-http-mcp','Template para registrar um MCP remoto via HTTP/Streamable HTTP.','custom','http','https://example.com/mcp',null,'[]','{}','{"Authorization":"Bearer <token>"}','draft',false,'{}')
+) as x(name, slug, description, category, transport, url, command, args, env_template, headers_template, status, official, metadata)
+on conflict (org_id, slug) do nothing;
