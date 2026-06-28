@@ -7,6 +7,9 @@ services:
     restart: unless-stopped
     env_file:
       - .runtime.env
+    environment:
+      HOSTNAME: 0.0.0.0
+      PORT: 3000
     networks:
       - traefik_default
       - supabase_net
