@@ -47,6 +47,8 @@ a { color: inherit; text-decoration: none; }
 button, input { font: inherit; }
 button { cursor: pointer; }
 input { min-width: 0; }
+img, svg { max-width: 100%; }
+.appShell > *, .heroGrid > *, .mainGrid > *, .bottomGrid > *, .sideStack, .panel, .panelSoft, .heroCopy, .heroConsole, .metricsDeck, .kanbanPanel { min-width: 0; }
 
 .appShell { position: relative; z-index: 1; width: min(1480px, 100%); margin: 0 auto; padding: 20px clamp(14px, 2.4vw, 32px) 44px; display: grid; gap: clamp(16px, 2vw, 26px); }
 .glass, .panel, .panelSoft { backdrop-filter: blur(22px); -webkit-backdrop-filter: blur(22px); }
@@ -201,30 +203,32 @@ h1 { margin: 22px 0 0; max-width: 980px; font-size: clamp(42px, 7vw, 96px); line
 .mobileDock { display: none; }
 
 @media (max-width: 1240px) {
-  .metricsDeck { grid-template-columns: repeat(3, minmax(0, 1fr)); }
   .heroGrid, .mainGrid { grid-template-columns: 1fr; }
   .heroCopy, .heroConsole { min-height: auto; }
-  .heroConsole { display: grid; grid-template-columns: minmax(0, 1fr) minmax(320px, 0.8fr); }
+  .heroConsole { display: grid; grid-template-columns: minmax(0, 1fr) minmax(300px, 0.72fr); }
   .signalCard { min-height: 220px; }
 }
 
-@media (max-width: 900px) {
-  .appShell { padding-bottom: 104px; }
-  .topbar { grid-template-columns: 1fr auto; top: 8px; }
-  .topnav { display: none; }
-  .ghostButton { font-size: 0; width: 44px; padding: 0; border-radius: 15px; }
+/* iPad 8 / tablets: 810px portrait, 1080px landscape. Treat as touch layout. */
+@media (max-width: 1100px) {
+  .appShell { padding-bottom: 106px; }
+  .panelSoft { padding: clamp(24px, 4vw, 38px); }
+  h1 { font-size: clamp(46px, 8vw, 72px); line-height: 0.92; letter-spacing: -0.065em; }
+  .heroCopy p { max-width: 680px; font-size: clamp(16px, 2.2vw, 20px); }
   .heroConsole { grid-template-columns: 1fr; }
+  .signalCard { min-height: 200px; }
+  .metricsDeck { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .metric { min-height: 136px; }
   .bottomGrid { grid-template-columns: 1fr; }
   .sectionHead { align-items: stretch; flex-direction: column; }
   .inlineForm { width: 100%; }
   .inlineForm input { width: 100%; flex: 1; }
-  .kanban { grid-template-columns: repeat(5, minmax(250px, 78vw)); margin-inline: -4px; padding-inline: 4px; }
-  .mobileDock { position: fixed; z-index: 40; left: 12px; right: 12px; bottom: 12px; display: grid; grid-template-columns: repeat(4, 1fr); gap: 4px; padding: 8px; border-radius: 24px; background: rgba(8,8,8,0.86); border: 1px solid var(--line); box-shadow: 0 16px 60px rgba(0,0,0,0.55); }
-  .mobileDock a { display: grid; place-items: center; gap: 4px; min-height: 52px; color: #d4d4d4; border-radius: 18px; font-size: 11px; font-weight: 650; }
-  .mobileDock a:active, .mobileDock a:hover { background: #fff; color: #000; }
+  .kanban { grid-template-columns: repeat(5, minmax(280px, 64vw)); margin-inline: -4px; padding-inline: 4px; }
+  .graphPanel { min-height: auto; }
+  .graphCanvas { height: min(460px, 52vw); min-height: 360px; }
 }
 
-@media (max-width: 680px) {
+@media (max-width: 820px) {
   .appShell { padding-inline: 12px; gap: 14px; }
   .panel, .panelSoft { border-radius: 24px; }
   .panel { padding: 16px; }
@@ -232,22 +236,38 @@ h1 { margin: 22px 0 0; max-width: 980px; font-size: clamp(42px, 7vw, 96px); line
   .brandMark small { display: none; }
   .brandMark b { font-size: 14px; }
   .duck { width: 40px; height: 40px; border-radius: 14px; }
-  .heroCopy { min-height: calc(100svh - 110px); justify-content: flex-end; }
-  h1 { font-size: clamp(42px, 14vw, 68px); line-height: 0.9; }
+  h1 { font-size: clamp(42px, 10vw, 64px); line-height: 0.93; }
   .heroCopy p { font-size: 16px; line-height: 1.5; }
   .heroActions { display: grid; grid-template-columns: 1fr; }
-  .primaryButton, .secondaryButton { width: 100%; min-height: 48px; }
+  .heroActions .primaryButton, .heroActions .secondaryButton { width: 100%; min-height: 48px; }
   .statusRail { display: grid; grid-template-columns: 1fr; }
-  .statusPill { justify-content: center; }
+  .statusPill { justify-content: center; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .miniGrid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .graphCanvas { height: 390px; min-height: 390px; }
+  .node { font-size: 12px; padding: 9px 11px; }
+  .node.root { font-size: 16px; padding: 14px 17px; }
+  .sectionTitle > span { width: 38px; height: 38px; border-radius: 13px; }
+  .agent { grid-template-columns: 40px minmax(0, 1fr) auto; }
+  .messages { height: 330px; }
+  .recordList { max-height: 420px; }
+}
+
+@media (max-width: 680px) {
+  .topbar { grid-template-columns: 1fr auto; top: 8px; }
+  .topnav { display: none; }
+  .ghostButton { font-size: 0; width: 44px; padding: 0; border-radius: 15px; }
+  .mobileDock { position: fixed; z-index: 40; left: 12px; right: 12px; bottom: max(12px, env(safe-area-inset-bottom)); display: grid; grid-template-columns: repeat(4, 1fr); gap: 4px; padding: 8px; border-radius: 24px; background: rgba(8,8,8,0.88); border: 1px solid var(--line); box-shadow: 0 16px 60px rgba(0,0,0,0.55); }
+  .mobileDock a { display: grid; place-items: center; gap: 4px; min-height: 52px; color: #d4d4d4; border-radius: 18px; font-size: 11px; font-weight: 650; }
+  .mobileDock a:active, .mobileDock a:hover { background: #fff; color: #000; }
+  .heroActions { grid-template-columns: 1fr; }
+  .heroActions .primaryButton, .heroActions .secondaryButton { width: 100%; }
+  .statusRail { grid-template-columns: 1fr; }
   .metricsDeck { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .metric { min-height: 132px; border-radius: 20px; }
   .metric strong { font-size: 30px; }
-  .miniGrid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-  .graphPanel { min-height: auto; }
-  .graphCanvas { height: 360px; }
+  .graphCanvas { height: 360px; min-height: 360px; }
   .node { font-size: 11px; padding: 8px 10px; }
   .node.root { font-size: 15px; padding: 14px 16px; }
-  .sectionTitle > span { width: 38px; height: 38px; border-radius: 13px; }
   .agent { grid-template-columns: 40px minmax(0, 1fr); }
   .agent em { grid-column: 2; justify-self: start; margin-top: 4px; }
   .inlineForm, .chatForm { display: grid; grid-template-columns: 1fr; }
@@ -263,6 +283,6 @@ h1 { margin: 22px 0 0; max-width: 980px; font-size: clamp(42px, 7vw, 96px); line
   .signalCard strong { font-size: 54px; }
   .search { width: 100%; }
   .search input { width: 100%; }
-  .mobileDock { left: 8px; right: 8px; bottom: 8px; border-radius: 20px; }
+  .mobileDock { left: 8px; right: 8px; bottom: max(8px, env(safe-area-inset-bottom)); border-radius: 20px; }
   .mobileDock a { min-height: 48px; font-size: 10px; }
 }
