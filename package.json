@@ -7,15 +7,14 @@
     "dev": "next dev -H 0.0.0.0 -p 3000",
     "build": "next build",
     "start": "next start -H 0.0.0.0 -p 3000",
-    "lint": "next lint"
+    "check": "next build"
   },
   "dependencies": {
-    "@vercel/analytics": "latest",
-    "lucide-react": "latest",
-    "next": "latest",
-    "pg": "latest",
-    "react": "latest",
-    "react-dom": "latest"
+    "lucide-react": "1.21.0",
+    "next": "16.2.9",
+    "pg": "8.22.0",
+    "react": "19.2.7",
+    "react-dom": "19.2.7"
   },
   "devDependencies": {}
 }

@@ -2,14 +2,15 @@
 'use client';
 
 import { useMemo, useState } from 'react';
-import { Bot, Brain, Cable, KanbanSquare, MessageSquare, Plus, Radio, Search, Sparkles } from 'lucide-react';
+import { Activity, Bot, Brain, Cable, CheckCircle2, KanbanSquare, MessageSquare, Plus, Radio, Search, Sparkles } from 'lucide-react';
 
 export default function Dashboard({ initialData, error }) {
   const [data, setData] = useState(initialData);
   const [chatText, setChatText] = useState('');
   const [cardTitle, setCardTitle] = useState('');
   const [search, setSearch] = useState('');
-  const graphNodes = useMemo(() => buildGraph(data), [data]);
+  const app = data.app || { brand: 'TanIA / PunkRecords Command OS', publicUrl: 'https://punkrecords.canhete.com', mcpPath: '/api/mcp', mcpUrl: 'https://punkrecords.canhete.com/api/mcp' };
+  const graphNodes = useMemo(() => buildGraph(), []);
 
   async function refresh() {
     const res = await fetch('/api/state');
@@ -18,16 +19,18 @@ export default function Dashboard({ initialData, error }) {
 
   async function sendMessage(e) {
     e.preventDefault();
-    if (!chatText.trim()) return;
-    await fetch('/api/chat', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ body: chatText, author_name: 'Operador', kind: 'chat' }) });
+    const body = chatText.trim();
+    if (!body) return;
+    await fetch('/api/chat', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ body, author_name: 'Operador', kind: 'chat' }) });
     setChatText('');
     refresh();
   }
 
   async function createCard(e) {
     e.preventDefault();
-    if (!cardTitle.trim()) return;
-    await fetch('/api/kanban/cards', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ title: cardTitle, description: 'Criado pelo cockpit PunkRecords', priority: 'medium' }) });
+    const title = cardTitle.trim();
+    if (!title) return;
+    await fetch('/api/kanban/cards', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ title, description: 'Criado pelo cockpit PunkRecords', priority: 'medium' }) });
     setCardTitle('');
     refresh();
   }
@@ -38,18 +41,25 @@ export default function Dashboard({ initialData, error }) {
     <main className="shell">
       <section className="hero panel">
         <div className="brandRow">
-          <div className="duck">◖●◗</div>
+          <div className="duck" aria-label="TanIA">◖●◗</div>
           <div>
-            <p className="eyebrow">TanIA / PunkRecords Command OS</p>
+            <p className="eyebrow">{app.brand}</p>
             <h1>Super Cérebro SaaS para agentes, humanos e qualquer IA via MCP.</h1>
           </div>
         </div>
-        <p className="heroText">Kanban interno estilo Runrun.it/Trello, chat operacional, memória Supabase e endpoint MCP universal em uma interface preta, branca e viva.</p>
+        <p className="heroText">Kanban interno, chat operacional, memória Supabase e endpoint MCP universal em uma interface preta, branca e consistente.</p>
+        <div className="statusStrip">
+          <span><CheckCircle2 size={16}/> Produção online</span>
+          <span><Activity size={16}/> Health: /api/health</span>
+          <span><Cable size={16}/> MCP: {app.mcpPath}</span>
+        </div>
         <div className="metrics">
           <Metric icon={<Brain />} label="Registros" value={data.stats?.records ?? '—'} />
           <Metric icon={<Sparkles />} label="Chunks" value={data.stats?.chunks ?? '—'} />
-          <Metric icon={<Cable />} label="Links" value={data.stats?.links ?? '—'} />
+          <Metric icon={<Bot />} label="Agentes" value={data.stats?.agents ?? (data.agents?.length || '—')} />
+          <Metric icon={<Cable />} label="Clientes MCP" value={data.stats?.mcp_clients ?? '—'} />
           <Metric icon={<KanbanSquare />} label="Cards" value={data.stats?.cards ?? '—'} />
+          <Metric icon={<MessageSquare />} label="Mensagens" value={data.stats?.messages ?? '—'} />
         </div>
         {error && <div className="error">Banco ainda não respondeu: {error}</div>}
       </section>
@@ -59,7 +69,7 @@ export default function Dashboard({ initialData, error }) {
           <div className="sectionTitle"><Radio size={18}/> Grafo vivo</div>
           <div className="graphCanvas">
             {graphNodes.map((n) => <div key={n.label} className={`node ${n.kind}`} style={{ left: n.x + '%', top: n.y + '%' }}>{n.label}</div>)}
-            <svg className="edges" viewBox="0 0 100 100" preserveAspectRatio="none">
+            <svg className="edges" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true">
               <line x1="50" y1="50" x2="18" y2="24" />
               <line x1="50" y1="50" x2="82" y2="20" />
               <line x1="50" y1="50" x2="18" y2="80" />
@@ -87,9 +97,14 @@ export default function Dashboard({ initialData, error }) {
             <Cable size={18}/>
             <div>
               <strong>MCP ativo</strong>
-              <code>POST /api/mcp</code>
-              <span>tools/list · tools/call · initialize</span>
+              <code>POST {app.mcpPath}</code>
+              <span>initialize · tools/list · tools/call · ping</span>
             </div>
+          </div>
+          <div className="clientList">
+            <strong>Clientes MCP recentes</strong>
+            {(data.mcpClients || []).length === 0 && <span>Nenhum cliente registrado ainda.</span>}
+            {(data.mcpClients || []).map(client => <span key={client.client_name}>{client.client_name}</span>)}
           </div>
         </div>
       </section>
@@ -146,7 +161,7 @@ function Card({ card }) {
   return <article className={`card priority-${card.priority}`}><strong>{card.title}</strong><p>{card.description}</p><span>{card.assignee || 'sem agente'} · {card.priority}</span></article>;
 }
 
-function buildGraph(data) {
+function buildGraph() {
   return [
     { label: 'PunkRecords', x: 50, y: 50, kind: 'root' },
     { label: 'MCP', x: 18, y: 24, kind: 'small' },
