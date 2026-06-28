@@ -1,74 +1,142 @@
-
 'use client';
 
 import { useMemo, useState } from 'react';
-import { Activity, Bot, Brain, Cable, CheckCircle2, KanbanSquare, MessageSquare, Plus, Radio, Search, Sparkles } from 'lucide-react';
+import {
+  Activity,
+  ArrowUpRight,
+  Bot,
+  Brain,
+  Cable,
+  CheckCircle2,
+  Clock3,
+  Command,
+  KanbanSquare,
+  MessageSquare,
+  Plus,
+  Radio,
+  Search,
+  ShieldCheck,
+  Sparkles,
+} from 'lucide-react';
 
 export default function Dashboard({ initialData, error }) {
   const [data, setData] = useState(initialData);
   const [chatText, setChatText] = useState('');
   const [cardTitle, setCardTitle] = useState('');
   const [search, setSearch] = useState('');
-  const app = data.app || { brand: 'TanIA / PunkRecords Command OS', publicUrl: 'https://punkrecords.canhete.com', mcpPath: '/api/mcp', mcpUrl: 'https://punkrecords.canhete.com/api/mcp' };
+  const app = data.app || {
+    brand: 'TanIA / PunkRecords Command OS',
+    publicUrl: 'https://punkrecords.canhete.com',
+    mcpPath: '/api/mcp',
+    mcpUrl: 'https://punkrecords.canhete.com/api/mcp',
+  };
   const graphNodes = useMemo(() => buildGraph(), []);
+  const filteredRecords = (data.recentRecords || []).filter((record) => {
+    const haystack = `${record.title} ${record.path}`.toLowerCase();
+    return !search || haystack.includes(search.toLowerCase());
+  });
 
   async function refresh() {
     const res = await fetch('/api/state');
     if (res.ok) setData(await res.json());
   }
 
-  async function sendMessage(e) {
-    e.preventDefault();
+  async function sendMessage(event) {
+    event.preventDefault();
     const body = chatText.trim();
     if (!body) return;
-    await fetch('/api/chat', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ body, author_name: 'Operador', kind: 'chat' }) });
+    await fetch('/api/chat', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ body, author_name: 'Operador', kind: 'chat' }),
+    });
     setChatText('');
     refresh();
   }
 
-  async function createCard(e) {
-    e.preventDefault();
+  async function createCard(event) {
+    event.preventDefault();
     const title = cardTitle.trim();
     if (!title) return;
-    await fetch('/api/kanban/cards', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ title, description: 'Criado pelo cockpit PunkRecords', priority: 'medium' }) });
+    await fetch('/api/kanban/cards', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ title, description: 'Criado pelo cockpit PunkRecords', priority: 'medium' }),
+    });
     setCardTitle('');
     refresh();
   }
 
-  const filteredRecords = (data.recentRecords || []).filter(r => !search || `${r.title} ${r.path}`.toLowerCase().includes(search.toLowerCase()));
-
   return (
-    <main className="shell">
-      <section className="hero panel">
-        <div className="brandRow">
-          <div className="duck" aria-label="TanIA">◖●◗</div>
-          <div>
-            <p className="eyebrow">{app.brand}</p>
-            <h1>Super Cérebro SaaS para agentes, humanos e qualquer IA via MCP.</h1>
+    <main className="appShell">
+      <header className="topbar glass">
+        <a className="brandMark" href="#top" aria-label="PunkRecords TanIA">
+          <span className="duck" aria-hidden="true">◖●◗</span>
+          <span>
+            <b>PunkRecords</b>
+            <small>Super Cérebro SaaS</small>
+          </span>
+        </a>
+        <nav className="topnav" aria-label="Navegação principal">
+          <a href="#graph">Grafo</a>
+          <a href="#kanban">Kanban</a>
+          <a href="#chat">Chat</a>
+          <a href={app.mcpUrl} target="_blank" rel="noreferrer">MCP <ArrowUpRight size={13} /></a>
+        </nav>
+        <button className="ghostButton" type="button" onClick={refresh}><Activity size={15} /> Sync</button>
+      </header>
+
+      <section id="top" className="heroGrid">
+        <div className="heroCopy panelSoft">
+          <div className="overline"><Command size={14} /> {app.brand}</div>
+          <h1>Um cockpit bonito, responsivo e vivo para agentes conectados ao seu cérebro.</h1>
+          <p>
+            PunkRecords une memória, kanban, chat e MCP num painel premium em preto e branco — pronto para humano, TanIA e qualquer IA operar junto.
+          </p>
+          <div className="heroActions">
+            <a className="primaryButton" href="#kanban">Abrir operação</a>
+            <a className="secondaryButton" href={app.mcpUrl} target="_blank" rel="noreferrer">Endpoint MCP</a>
+          </div>
+          <div className="statusRail" aria-label="Status do sistema">
+            <StatusPill icon={<CheckCircle2 />} text="Produção online" strong />
+            <StatusPill icon={<ShieldCheck />} text="Banco saudável" />
+            <StatusPill icon={<Cable />} text={app.mcpPath} />
+          </div>
+          {error && <div className="error">Banco ainda não respondeu: {error}</div>}
+        </div>
+
+        <div className="heroConsole panelSoft" aria-label="Resumo operacional">
+          <div className="consoleHeader">
+            <span className="dotGroup"><i/><i/><i/></span>
+            <code>punkrecords.canhete.com</code>
+          </div>
+          <div className="signalCard">
+            <span>Registros indexados</span>
+            <strong>{formatNumber(data.stats?.records)}</strong>
+            <small>{formatNumber(data.stats?.chunks)} chunks · {formatNumber(data.stats?.links)} links</small>
+          </div>
+          <div className="miniGrid">
+            <MiniStat label="Agentes" value={data.stats?.agents ?? data.agents?.length} />
+            <MiniStat label="MCP clients" value={data.stats?.mcp_clients} />
+            <MiniStat label="Cards" value={data.stats?.cards} />
+            <MiniStat label="Mensagens" value={data.stats?.messages} />
           </div>
         </div>
-        <p className="heroText">Kanban interno, chat operacional, memória Supabase e endpoint MCP universal em uma interface preta, branca e consistente.</p>
-        <div className="statusStrip">
-          <span><CheckCircle2 size={16}/> Produção online</span>
-          <span><Activity size={16}/> Health: /api/health</span>
-          <span><Cable size={16}/> MCP: {app.mcpPath}</span>
-        </div>
-        <div className="metrics">
-          <Metric icon={<Brain />} label="Registros" value={data.stats?.records ?? '—'} />
-          <Metric icon={<Sparkles />} label="Chunks" value={data.stats?.chunks ?? '—'} />
-          <Metric icon={<Bot />} label="Agentes" value={data.stats?.agents ?? (data.agents?.length || '—')} />
-          <Metric icon={<Cable />} label="Clientes MCP" value={data.stats?.mcp_clients ?? '—'} />
-          <Metric icon={<KanbanSquare />} label="Cards" value={data.stats?.cards ?? '—'} />
-          <Metric icon={<MessageSquare />} label="Mensagens" value={data.stats?.messages ?? '—'} />
-        </div>
-        {error && <div className="error">Banco ainda não respondeu: {error}</div>}
       </section>
 
-      <section className="gridTwo">
-        <div className="panel graphPanel">
-          <div className="sectionTitle"><Radio size={18}/> Grafo vivo</div>
+      <section className="metricsDeck" aria-label="Métricas principais">
+        <Metric icon={<Brain />} label="Registros" value={data.stats?.records} helper="memória total" />
+        <Metric icon={<Sparkles />} label="Chunks" value={data.stats?.chunks} helper="fragmentos RAG" />
+        <Metric icon={<Bot />} label="Agentes" value={data.stats?.agents ?? data.agents?.length} helper="operadores" />
+        <Metric icon={<Cable />} label="Clientes MCP" value={data.stats?.mcp_clients} helper="integrações" />
+        <Metric icon={<KanbanSquare />} label="Cards" value={data.stats?.cards} helper="em fluxo" />
+        <Metric icon={<MessageSquare />} label="Mensagens" value={data.stats?.messages} helper="war room" />
+      </section>
+
+      <section className="mainGrid">
+        <article id="graph" className="panel graphPanel">
+          <SectionTitle icon={<Radio />} kicker="Mapa vivo" title="Grafo operacional" />
           <div className="graphCanvas">
-            {graphNodes.map((n) => <div key={n.label} className={`node ${n.kind}`} style={{ left: n.x + '%', top: n.y + '%' }}>{n.label}</div>)}
             <svg className="edges" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true">
               <line x1="50" y1="50" x2="18" y2="24" />
               <line x1="50" y1="50" x2="82" y2="20" />
@@ -76,89 +144,139 @@ export default function Dashboard({ initialData, error }) {
               <line x1="50" y1="50" x2="82" y2="78" />
               <line x1="50" y1="50" x2="50" y2="12" />
             </svg>
-          </div>
-        </div>
-
-        <div className="panel agentsPanel">
-          <div className="sectionTitle"><Bot size={18}/> Agentes conectados</div>
-          <div className="agentList">
-            {(data.agents || []).map(agent => (
-              <div className="agent" key={agent.id}>
-                <div className="agentAvatar">{agent.avatar === 'duck' ? '◖●◗' : agent.name[0]}</div>
-                <div>
-                  <strong>{agent.name}</strong>
-                  <span>{agent.role} · {agent.model || 'local'}</span>
-                </div>
-                <em className={agent.status}>{agent.status}</em>
+            {graphNodes.map((node) => (
+              <div key={node.label} className={`node ${node.kind}`} style={{ left: `${node.x}%`, top: `${node.y}%` }}>
+                <span>{node.label}</span>
               </div>
             ))}
           </div>
-          <div className="mcpBox">
-            <Cable size={18}/>
-            <div>
-              <strong>MCP ativo</strong>
+        </article>
+
+        <aside className="sideStack">
+          <article className="panel agentsPanel">
+            <SectionTitle icon={<Bot />} kicker="Equipe" title="Agentes conectados" />
+            <div className="agentList">
+              {(data.agents || []).map((agent) => <AgentRow key={agent.id} agent={agent} />)}
+            </div>
+          </article>
+
+          <article className="panel mcpPanel">
+            <SectionTitle icon={<Cable />} kicker="JSON-RPC" title="MCP ativo" />
+            <div className="endpointBox">
               <code>POST {app.mcpPath}</code>
               <span>initialize · tools/list · tools/call · ping</span>
             </div>
-          </div>
-          <div className="clientList">
-            <strong>Clientes MCP recentes</strong>
-            {(data.mcpClients || []).length === 0 && <span>Nenhum cliente registrado ainda.</span>}
-            {(data.mcpClients || []).map(client => <span key={client.client_name}>{client.client_name}</span>)}
-          </div>
-        </div>
+            <div className="clientList">
+              <strong>Clientes recentes</strong>
+              {(data.mcpClients || []).length === 0 && <span>Nenhum cliente registrado ainda.</span>}
+              {(data.mcpClients || []).map((client) => <span key={client.client_name}>{client.client_name}</span>)}
+            </div>
+          </article>
+        </aside>
       </section>
 
-      <section className="panel kanbanPanel">
+      <section id="kanban" className="panel kanbanPanel">
         <div className="sectionHead">
-          <div className="sectionTitle"><KanbanSquare size={18}/> Kanban dos agentes</div>
+          <SectionTitle icon={<KanbanSquare />} kicker="Fluxo" title="Kanban dos agentes" />
           <form onSubmit={createCard} className="inlineForm">
-            <input value={cardTitle} onChange={e => setCardTitle(e.target.value)} placeholder="Novo card para os agentes…" />
-            <button><Plus size={16}/> Criar</button>
+            <input value={cardTitle} onChange={(e) => setCardTitle(e.target.value)} placeholder="Novo card para os agentes…" />
+            <button className="primaryButton buttonReset"><Plus size={16} /> Criar</button>
           </form>
         </div>
-        <div className="kanban">
-          {(data.columns || []).map(col => (
-            <div className="column" key={col.column_id}>
-              <div className="columnTitle"><span>{col.column_name}</span><b>{col.cards?.length || 0}</b></div>
-              {(col.cards || []).map(card => <Card key={card.id} card={card} />)}
+        <div className="kanban" aria-label="Quadro kanban">
+          {(data.columns || []).map((column) => (
+            <div className="column" key={column.column_id}>
+              <div className="columnTitle"><span>{column.column_name}</span><b>{column.cards?.length || 0}</b></div>
+              {(column.cards || []).map((card) => <Card key={card.id} card={card} />)}
+              {(column.cards || []).length === 0 && <div className="emptySlot">Aguardando próximo movimento</div>}
             </div>
           ))}
         </div>
       </section>
 
-      <section className="gridTwo bottomGrid">
-        <div className="panel chatPanel">
-          <div className="sectionTitle"><MessageSquare size={18}/> Chat interno</div>
+      <section className="bottomGrid">
+        <article id="chat" className="panel chatPanel">
+          <SectionTitle icon={<MessageSquare />} kicker="War room" title="Chat interno" />
           <div className="messages">
-            {(data.messages || []).map(m => <div key={m.id} className={`msg ${m.kind}`}><b>{m.author_name}</b><p>{m.body}</p></div>)}
+            {(data.messages || []).map((message) => <Message key={message.id} message={message} />)}
           </div>
           <form onSubmit={sendMessage} className="chatForm">
-            <input value={chatText} onChange={e => setChatText(e.target.value)} placeholder="Falar com os agentes…" />
-            <button>Enviar</button>
+            <input value={chatText} onChange={(e) => setChatText(e.target.value)} placeholder="Falar com os agentes…" />
+            <button className="primaryButton buttonReset">Enviar</button>
           </form>
-        </div>
+        </article>
 
-        <div className="panel recordsPanel">
-          <div className="sectionHead">
-            <div className="sectionTitle"><Brain size={18}/> Memória recente</div>
-            <label className="search"><Search size={15}/><input value={search} onChange={e => setSearch(e.target.value)} placeholder="filtrar" /></label>
+        <article className="panel recordsPanel">
+          <div className="sectionHead compact">
+            <SectionTitle icon={<Brain />} kicker="Vault" title="Memória recente" />
+            <label className="search"><Search size={15}/><input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="filtrar" /></label>
           </div>
           <div className="recordList">
-            {filteredRecords.map(r => <article key={r.path}><strong>{r.title}</strong><code>{r.path}</code></article>)}
+            {filteredRecords.map((record) => <Record key={record.path} record={record} />)}
           </div>
-        </div>
+        </article>
       </section>
+
+      <nav className="mobileDock glass" aria-label="Atalhos mobile">
+        <a href="#top"><Command size={17} /> Início</a>
+        <a href="#graph"><Radio size={17} /> Grafo</a>
+        <a href="#kanban"><KanbanSquare size={17} /> Kanban</a>
+        <a href="#chat"><MessageSquare size={17} /> Chat</a>
+      </nav>
     </main>
   );
 }
 
-function Metric({ icon, label, value }) {
-  return <div className="metric">{icon}<span>{label}</span><strong>{value}</strong></div>;
+function SectionTitle({ icon, kicker, title }) {
+  return <div className="sectionTitle"><span>{icon}</span><div><small>{kicker}</small><h2>{title}</h2></div></div>;
+}
+
+function StatusPill({ icon, text, strong }) {
+  return <span className={strong ? 'statusPill strong' : 'statusPill'}>{icon}{text}</span>;
+}
+
+function Metric({ icon, label, value, helper }) {
+  return <article className="metric">{icon}<span>{label}</span><strong>{formatNumber(value)}</strong><small>{helper}</small></article>;
+}
+
+function MiniStat({ label, value }) {
+  return <div className="miniStat"><span>{label}</span><b>{formatNumber(value)}</b></div>;
+}
+
+function AgentRow({ agent }) {
+  return (
+    <div className="agent">
+      <div className="agentAvatar">{agent.avatar === 'duck' ? '◖●◗' : agent.name?.[0]}</div>
+      <div className="agentMain">
+        <strong>{agent.name}</strong>
+        <span>{agent.role} · {agent.model || 'local'}</span>
+      </div>
+      <em className={agent.status}>{agent.status || 'idle'}</em>
+    </div>
+  );
 }
 
 function Card({ card }) {
-  return <article className={`card priority-${card.priority}`}><strong>{card.title}</strong><p>{card.description}</p><span>{card.assignee || 'sem agente'} · {card.priority}</span></article>;
+  return (
+    <article className={`card priority-${card.priority}`}>
+      <strong>{card.title}</strong>
+      <p>{card.description}</p>
+      <span><Clock3 size={12} /> {card.assignee || 'sem agente'} · {card.priority}</span>
+    </article>
+  );
+}
+
+function Message({ message }) {
+  return <div className={`msg ${message.kind}`}><b>{message.author_name}</b><p>{message.body}</p></div>;
+}
+
+function Record({ record }) {
+  return <article><strong>{record.title}</strong><code>{record.path}</code></article>;
+}
+
+function formatNumber(value) {
+  if (value === null || value === undefined || value === '') return '—';
+  return new Intl.NumberFormat('pt-BR').format(Number(value));
 }
 
 function buildGraph() {
